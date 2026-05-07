@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowLeft, ArrowUp, Barbell, CheckCircle, ClockCountdown, Info, LinkSimple, Pause, PencilSimple, Play, PlayCircle, TrendUp, X } from 'phosphor-react-native';
 import { router, type Href, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Linking, Modal, Pressable, ScrollView, TextInput, View, type ScrollView as ScrollViewType } from 'react-native';
+import { Alert, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, TextInput, View, type ScrollView as ScrollViewType } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
@@ -13,7 +13,7 @@ import { ExerciseVisual } from '../components/ExerciseVisual';
 import { WorkoutExerciseListItem } from '../components/WorkoutExerciseListItem';
 import { getTotalSets, getWorkoutSession } from '../data/workoutSheets';
 
-type WeightEditorState = {
+type SetEditorState = {
   exerciseIndex: number;
   setIndex: number;
 };
@@ -25,6 +25,10 @@ function formatSeconds(total: number) {
 }
 
 function weightKey(exerciseId: string, setId: string) {
+  return `${exerciseId}:${setId}`;
+}
+
+function repsKey(exerciseId: string, setId: string) {
   return `${exerciseId}:${setId}`;
 }
 
@@ -62,8 +66,10 @@ export function WorkoutSessionScreen() {
   const [customWeight, setCustomWeight] = useState('0');
   const [infoOpen, setInfoOpen] = useState(false);
   const [weightOverrides, setWeightOverrides] = useState<Record<string, string>>({});
-  const [weightEditor, setWeightEditor] = useState<WeightEditorState | null>(null);
+  const [repsOverrides, setRepsOverrides] = useState<Record<string, string>>({});
+  const [setEditor, setSetEditor] = useState<SetEditorState | null>(null);
   const [weightDraft, setWeightDraft] = useState('');
+  const [repsDraft, setRepsDraft] = useState('');
 
   const exercise = sessionExercises[currentIndex] ?? sessionExercises[0];
   const exerciseVideos = exercise.videos ?? [];
@@ -190,36 +196,42 @@ export function WorkoutSessionScreen() {
     return weightOverrides[weightKey(exerciseId, setId)] ?? prescribedWeight;
   }
 
-  function openWeightEditor(setIndex: number) {
-    const set = exercise.sets[setIndex];
-
-    if (!set?.weight) {
-      return;
-    }
-
-    setWeightDraft(parseWeight(getSetWeight(exercise.id, set.id, set.weight)).toString());
-    setWeightEditor({ exerciseIndex: currentIndex, setIndex });
+  function getSetReps(exerciseId: string, setId: string, prescribedReps: string) {
+    return repsOverrides[repsKey(exerciseId, setId)] ?? prescribedReps;
   }
 
-  function applyWeight(scope: 'single' | 'exercise-next' | 'workout-next') {
-    if (!weightEditor) {
+  function openSetEditor(setIndex: number) {
+    const set = exercise.sets[setIndex];
+
+    if (!set) {
       return;
     }
 
-    const nextWeight = formatWeight(weightDraft);
+    setRepsDraft(getSetReps(exercise.id, set.id, set.reps));
+    setWeightDraft(set.weight ? parseWeight(getSetWeight(exercise.id, set.id, set.weight)).toString() : '');
+    setSetEditor({ exerciseIndex: currentIndex, setIndex });
+  }
+
+  function applySetExecution(scope: 'single' | 'exercise-next' | 'workout-next') {
+    if (!setEditor) {
+      return;
+    }
+
+    const nextWeight = weightDraft ? formatWeight(weightDraft) : '';
+    const nextReps = repsDraft.trim();
     setWeightOverrides((current) => {
       const next = { ...current };
 
       sessionExercises.forEach((item, itemIndex) => {
-        if (scope === 'single' && itemIndex !== weightEditor.exerciseIndex) {
+        if (scope === 'single' && itemIndex !== setEditor.exerciseIndex) {
           return;
         }
 
-        if (scope === 'exercise-next' && itemIndex !== weightEditor.exerciseIndex) {
+        if (scope === 'exercise-next' && itemIndex !== setEditor.exerciseIndex) {
           return;
         }
 
-        if (scope === 'workout-next' && itemIndex < weightEditor.exerciseIndex) {
+        if (scope === 'workout-next' && itemIndex < setEditor.exerciseIndex) {
           return;
         }
 
@@ -228,21 +240,59 @@ export function WorkoutSessionScreen() {
             return;
           }
 
-          if (scope === 'single' && setIndex !== weightEditor.setIndex) {
+          if (scope === 'single' && setIndex !== setEditor.setIndex) {
             return;
           }
 
-          if ((scope === 'exercise-next' || scope === 'workout-next') && itemIndex === weightEditor.exerciseIndex && setIndex < weightEditor.setIndex) {
+          if ((scope === 'exercise-next' || scope === 'workout-next') && itemIndex === setEditor.exerciseIndex && setIndex < setEditor.setIndex) {
             return;
           }
 
-          next[weightKey(item.id, set.id)] = nextWeight;
+          if (nextWeight) {
+            next[weightKey(item.id, set.id)] = nextWeight;
+          }
         });
       });
 
       return next;
     });
-    setWeightEditor(null);
+
+    setRepsOverrides((current) => {
+      const next = { ...current };
+
+      if (!nextReps) {
+        return next;
+      }
+
+      sessionExercises.forEach((item, itemIndex) => {
+        if (scope === 'single' && itemIndex !== setEditor.exerciseIndex) {
+          return;
+        }
+
+        if (scope === 'exercise-next' && itemIndex !== setEditor.exerciseIndex) {
+          return;
+        }
+
+        if (scope === 'workout-next' && itemIndex < setEditor.exerciseIndex) {
+          return;
+        }
+
+        item.sets.forEach((set, setIndex) => {
+          if (scope === 'single' && setIndex !== setEditor.setIndex) {
+            return;
+          }
+
+          if ((scope === 'exercise-next' || scope === 'workout-next') && itemIndex === setEditor.exerciseIndex && setIndex < setEditor.setIndex) {
+            return;
+          }
+
+          next[repsKey(item.id, set.id)] = nextReps;
+        });
+      });
+
+      return next;
+    });
+    setSetEditor(null);
   }
 
   function openVideo(url: string) {
@@ -511,21 +561,22 @@ export function WorkoutSessionScreen() {
                     <AppText className="text-center text-base font-semibold text-text-muted">Repeticoes</AppText>
                     {exercise.sets.map((set, index) => {
                       const done = index < completedSets;
+                      const currentReps = getSetReps(exercise.id, set.id, set.reps);
+                      const currentWeight = getSetWeight(exercise.id, set.id, set.weight);
 
                       return (
                         <View key={set.id} className="min-h-[78px] flex-row items-center border-b border-border-subtle">
                           <View className={cn('h-11 w-11 items-center justify-center rounded-full border-2', done ? 'border-brand-primary bg-brand-primary' : 'border-text-muted')}>
                             <AppText className={cn('text-base font-semibold', done ? 'text-white' : 'text-text-muted')}>{index + 1}</AppText>
                           </View>
-                          <AppText className="flex-1 text-center text-4xl font-light text-text-main">{set.reps}</AppText>
-                          {set.weight ? (
-                            <Pressable className="w-24 items-end rounded-2xl bg-bg-base px-3 py-2" onPress={() => openWeightEditor(index)}>
-                              <AppText className="text-base font-semibold text-text-main">{getSetWeight(exercise.id, set.id, set.weight)}</AppText>
-                              <AppText className="mt-0.5 text-[10px] text-brand-secondary">editar</AppText>
-                            </Pressable>
-                          ) : (
-                            <AppText className="w-20 text-right text-base text-text-muted">{set.duration ?? ''}</AppText>
-                          )}
+                          <Pressable className="flex-1 items-center py-3" onPress={() => openSetEditor(index)}>
+                            <AppText className="text-4xl font-light text-text-main">{currentReps}</AppText>
+                            <AppText className="mt-1 text-xs text-brand-secondary">editar reps</AppText>
+                          </Pressable>
+                          <Pressable className="w-24 items-end py-3" onPress={() => openSetEditor(index)}>
+                            <AppText className="text-base font-semibold text-text-main">{currentWeight ?? set.duration ?? '-'}</AppText>
+                            <AppText className="mt-1 text-xs text-brand-secondary">{set.weight ? 'editar peso' : 'editar'}</AppText>
+                          </Pressable>
                         </View>
                       );
                     })}
@@ -670,14 +721,18 @@ export function WorkoutSessionScreen() {
         </View>
       </SafeAreaView>
 
-      <Modal animationType="fade" transparent visible={Boolean(weightEditor)} onRequestClose={() => setWeightEditor(null)}>
-        <View className="flex-1 justify-end bg-black/70 px-5 pb-7">
-          <View className="rounded-[28px] border border-border-subtle bg-bg-surface px-5 py-5">
+      <Modal animationType="fade" transparent visible={Boolean(setEditor)} onRequestClose={() => setSetEditor(null)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1 justify-end bg-black/70 px-5"
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 18 : 0}
+        >
+          <View className="mb-5 rounded-[28px] border border-border-subtle bg-bg-surface px-5 py-5">
             <View className="mb-5 flex-row items-start justify-between gap-4">
               <View className="flex-1">
-                <AppText className="text-2xl font-semibold text-text-main">Peso usado</AppText>
+                <AppText className="text-2xl font-semibold text-text-main">Serie executada</AppText>
                 <AppText className="mt-2 text-sm leading-relaxed text-text-muted">
-                  Atualize a carga executada hoje e escolha onde repetir este ajuste.
+                  Edite repeticoes e peso usados hoje. A ficha prescrita continua igual.
                 </AppText>
               </View>
               <View className="h-12 w-12 items-center justify-center rounded-2xl bg-brand-primary/12">
@@ -685,35 +740,49 @@ export function WorkoutSessionScreen() {
               </View>
             </View>
 
-            <View className="rounded-2xl bg-bg-base px-4 py-4">
-              <AppText className="text-sm text-text-muted">Carga em kg</AppText>
-              <TextInput
-                autoFocus
-                className="mt-2 text-4xl font-light text-text-main"
-                keyboardType="decimal-pad"
-                onChangeText={setWeightDraft}
-                placeholder="0"
-                placeholderTextColor="#8A8D99"
-                value={weightDraft}
-              />
+            <View className="flex-row gap-3">
+              <View className="flex-1 rounded-2xl bg-bg-base px-4 py-4">
+                <AppText className="text-sm text-text-muted">Repeticoes</AppText>
+                <TextInput
+                  autoFocus
+                  className="mt-2 text-4xl font-light text-text-main"
+                  keyboardType="number-pad"
+                  onChangeText={setRepsDraft}
+                  placeholder="0"
+                  placeholderTextColor="#8A8D99"
+                  value={repsDraft}
+                />
+              </View>
+
+              <View className="flex-1 rounded-2xl bg-bg-base px-4 py-4">
+                <AppText className="text-sm text-text-muted">Peso kg</AppText>
+                <TextInput
+                  className="mt-2 text-4xl font-light text-text-main"
+                  keyboardType="decimal-pad"
+                  onChangeText={setWeightDraft}
+                  placeholder="-"
+                  placeholderTextColor="#8A8D99"
+                  value={weightDraft}
+                />
+              </View>
             </View>
 
             <View className="mt-4 gap-3">
-              <Pressable className="min-h-[54px] items-center justify-center rounded-2xl bg-brand-primary px-5" onPress={() => applyWeight('single')}>
+              <Pressable className="min-h-[54px] items-center justify-center rounded-2xl bg-brand-primary px-5" onPress={() => applySetExecution('single')}>
                 <AppText className="text-base font-semibold text-white">Atualizar so esta serie</AppText>
               </Pressable>
-              <Pressable className="min-h-[54px] items-center justify-center rounded-2xl border border-border-subtle bg-bg-base px-5" onPress={() => applyWeight('exercise-next')}>
+              <Pressable className="min-h-[54px] items-center justify-center rounded-2xl border border-border-subtle bg-bg-base px-5" onPress={() => applySetExecution('exercise-next')}>
                 <AppText className="text-base font-semibold text-text-main">Esta e proximas series</AppText>
               </Pressable>
-              <Pressable className="min-h-[54px] items-center justify-center rounded-2xl border border-border-subtle bg-bg-base px-5" onPress={() => applyWeight('workout-next')}>
+              <Pressable className="min-h-[54px] items-center justify-center rounded-2xl border border-border-subtle bg-bg-base px-5" onPress={() => applySetExecution('workout-next')}>
                 <AppText className="text-base font-semibold text-text-main">Proximas series e exercicios</AppText>
               </Pressable>
-              <Pressable className="min-h-[48px] items-center justify-center" onPress={() => setWeightEditor(null)}>
+              <Pressable className="min-h-[48px] items-center justify-center" onPress={() => setSetEditor(null)}>
                 <AppText className="text-base font-semibold text-text-muted">Cancelar</AppText>
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

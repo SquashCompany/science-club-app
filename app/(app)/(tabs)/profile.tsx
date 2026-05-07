@@ -1,3 +1,5 @@
-import { ProfileScreen } from '@/src/features/home/screens/ProfileScreen';
+import { ProfileDashboardScreen } from '@/src/features/profile/screens/ProfileDashboardScreen';
 
-export default ProfileScreen;
+export default function ProfileRoute() {
+  return <ProfileDashboardScreen />;
+}

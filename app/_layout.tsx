@@ -11,6 +11,7 @@ import { enableScreens } from 'react-native-screens';
 
 import { AppProviders } from '@/src/providers/AppProviders';
 import { AppLoader } from '@/src/shared/components/ui/AppLoader';
+import { AppSonner } from '@/src/shared/components/ui/AppSonner';
 import { useColorScheme, colorScheme } from 'nativewind';
 import { LightNavigationTheme, DarkNavigationTheme } from '@/src/shared/theme/navigationTheme';
 
@@ -48,6 +49,7 @@ export default function RootLayout() {
             <Stack.Screen name="(public)" />
             <Stack.Screen name="(app)" />
           </Stack>
+          <AppSonner />
         </AppProviders>
         <StatusBar style={colorScheme === 'light' ? "dark" : "light"} />
       </ThemeProvider>

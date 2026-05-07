@@ -6,13 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { AppScreen } from '@/src/shared/components/ui/AppScreen';
 import { AppText } from '@/src/shared/components/ui/AppText';
 
-import { ExerciseVisual } from '../components/ExerciseVisual';
 import { workoutSheets } from '../data/workoutSheets';
-
-function openSheet(sheetId: string, sessionId?: string) {
-  const suffix = sessionId ? `?sessionId=${sessionId}` : '';
-  router.push(`/(app)/workouts/${sheetId}${suffix}` as Href);
-}
 
 export function WorkoutSheetsScreen() {
   const primarySheet = workoutSheets[0];
@@ -103,48 +97,6 @@ export function WorkoutSheetsScreen() {
           ))}
         </View>
       </Animated.View>
-
-      <View className="gap-8">
-        <AppText className="text-2xl font-semibold text-text-main">Fichas ativas</AppText>
-        {workoutSheets.map((sheet, sheetIndex) => (
-          <Animated.View key={sheet.id} entering={FadeInDown.delay(140 + sheetIndex * 80).duration(450)}>
-            <Pressable
-              accessibilityRole="button"
-              className="rounded-[28px] border border-border-subtle bg-bg-surface px-5 py-5"
-              onPress={() => openSheet(sheet.id, sheet.sessions[0]?.id)}
-            >
-              <View className="mb-5 flex-row items-start justify-between gap-4">
-                <View className="flex-1">
-                  <AppText className="text-sm text-text-muted">{sheet.level} - {sheet.goal}</AppText>
-                  <AppText className="mt-2 text-2xl font-semibold leading-tight text-text-main">{sheet.title}</AppText>
-                  <AppText className="mt-2 text-sm text-text-muted">{sheet.coach} - atualizado {sheet.updatedAt}</AppText>
-                </View>
-                <View className="rounded-2xl bg-bg-base px-3 py-2">
-                  <AppText className="text-sm font-semibold text-brand-secondary">{sheet.sessions.length} fichas</AppText>
-                </View>
-              </View>
-
-              <View className="gap-3">
-                {sheet.sessions.map((session) => (
-                  <Pressable
-                    key={session.id}
-                    accessibilityRole="button"
-                    className="flex-row items-center rounded-2xl border border-border-subtle bg-bg-base px-4 py-4"
-                    onPress={() => openSheet(sheet.id, session.id)}
-                  >
-                    <ExerciseVisual muscle={session.muscles[0] ?? 'Core'} />
-                    <View className="ml-4 flex-1">
-                      <AppText className="text-xl font-semibold text-text-main">{session.title}</AppText>
-                      <AppText className="mt-1 text-sm text-text-muted">{session.type} - {session.days}</AppText>
-                    </View>
-                    <CaretRight color="#71717A" size={20} weight="bold" />
-                  </Pressable>
-                ))}
-              </View>
-            </Pressable>
-          </Animated.View>
-        ))}
-      </View>
     </AppScreen>
   );
 }

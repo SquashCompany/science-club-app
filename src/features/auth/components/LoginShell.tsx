@@ -1,4 +1,5 @@
 import { CaretLeft } from 'phosphor-react-native';
+import { useColorScheme } from 'nativewind';
 import { PropsWithChildren } from 'react';
 import { View, Pressable, Image } from 'react-native';
 
@@ -8,8 +9,6 @@ type LoginShellProps = PropsWithChildren<{
   onBack?: () => void;
   showBackButton?: boolean;
 }>;
-
-import { useColorScheme } from 'nativewind';
 
 export function LoginShell({ children, onBack, showBackButton }: LoginShellProps) {
   const { colorScheme } = useColorScheme();

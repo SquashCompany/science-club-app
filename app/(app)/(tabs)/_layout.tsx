@@ -1,14 +1,13 @@
-import { House, Barbell, ForkKnife, ChartPieSlice, UserCircle } from 'phosphor-react-native';
+import { Barbell, ChartPieSlice, ClockCounterClockwise, ForkKnife, House, UserCircle } from 'phosphor-react-native';
 import { Tabs } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import { useEffect } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-
-import { colors } from '@/src/shared/theme/tokens';
 
 function TabIcon({ Icon, color, focused }: { Icon: any; color: string; focused: boolean }) {
   const scale = useSharedValue(1);
@@ -27,8 +26,6 @@ function TabIcon({ Icon, color, focused }: { Icon: any; color: string; focused: 
     </Animated.View>
   );
 }
-
-import { useColorScheme } from 'nativewind';
 
 export default function AppTabsLayout() {
   const { colorScheme } = useColorScheme();
@@ -89,6 +86,13 @@ export default function AppTabsLayout() {
         options={{
           title: 'Avaliações',
           tabBarIcon: (props) => <TabIcon Icon={ChartPieSlice} {...props} />,
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'Histórico',
+          tabBarIcon: (props) => <TabIcon Icon={ClockCounterClockwise} {...props} />,
         }}
       />
       <Tabs.Screen

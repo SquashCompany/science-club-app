@@ -11,21 +11,24 @@ import type { RegisterFormValues } from '../types/auth.types';
 
 type RegisterStepProps = {
   cpf: string;
+  email?: string;
   isLoading: boolean;
   onBack: () => void;
   onForgotPassword: () => void;
   onSubmit: (values: RegisterFormValues) => void;
 };
 
-export function RegisterStep({ cpf, isLoading, onSubmit }: RegisterStepProps) {
+export function RegisterStep({ cpf, email, isLoading, onSubmit }: RegisterStepProps) {
   const {
     control,
     handleSubmit,
     formState: { errors },
   } = useForm<RegisterFormValues>({
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: email || '', password: '' },
     resolver: zodResolver(registerSchema),
   });
+
+  const hasPrefilledEmail = !!email;
 
   return (
     <View className="flex-1 justify-between">
@@ -60,8 +63,10 @@ export function RegisterStep({ cpf, isLoading, onSubmit }: RegisterStepProps) {
                     placeholder="seu@email.com"
                     placeholderTextColor="var(--color-text-muted)"
                     value={value}
+                    editable={!hasPrefilledEmail}
                     selectionColor="#8B5CF6"
                     cursorColor="#8B5CF6"
+                    style={hasPrefilledEmail ? { opacity: 0.6 } : undefined}
                   />
                 )}
               />

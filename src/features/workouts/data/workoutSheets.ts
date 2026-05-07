@@ -459,9 +459,9 @@ const upperLowerTwoExercises: WorkoutExercise[] = [
 
 export const workoutSheets: WorkoutSheet[] = [
   {
-    id: 'smart-trainer-resistencia',
+    id: 'science-base-resistencia',
     level: 'Iniciante',
-    title: 'Smart Trainer - Resistencia',
+    title: 'Base Science - Resistencia',
     goal: 'Full Body',
     coach: 'Prof. Marcos',
     updatedAt: 'Hoje, 09:30',

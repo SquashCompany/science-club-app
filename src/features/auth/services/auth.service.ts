@@ -1,33 +1,44 @@
-import { findMockStudent } from '../constants/mockAuth';
-import type { AuthSession, CpfFormValues, PasswordFormValues, RegisterFormValues } from '../types/auth.types';
+import { lookupByCpf, loginStudent, registerStudentAccess } from '../api/Auth';
+import type { AuthLookupResponse, AuthSession, CpfFormValues, PasswordFormValues, RegisterFormValues } from '../types/auth.types';
+import { onlyDigits } from '@/src/shared/utils/cpf';
 
-const MOCK_DELAY = 850;
+export async function lookupStudentByCpf(values: CpfFormValues): Promise<AuthLookupResponse> {
+  const cpfDigits = onlyDigits(values.cpf);
+  const result = await lookupByCpf(cpfDigits);
 
-function wait() {
-  return new Promise((resolve) => setTimeout(resolve, MOCK_DELAY));
-}
-
-export async function lookupStudentByCpf(values: CpfFormValues) {
-  await wait();
-  return findMockStudent(values.cpf);
+  return {
+    status: result.status as AuthLookupResponse['status'],
+    email: result.email,
+    name: result.name,
+  };
 }
 
 export async function signInWithPassword(cpf: string, values: PasswordFormValues): Promise<AuthSession> {
-  await wait();
+  const cpfDigits = onlyDigits(cpf);
+  const result = await loginStudent(cpfDigits, values.password);
 
   return {
-    cpf,
-    studentId: 'student_mock_existing',
-    token: `mock-token:${cpf}:${values.password.length}`,
+    cpf: result.cpf,
+    studentId: result.studentId,
+    token: result.token,
+    refreshToken: result.refreshToken,
+    name: result.name,
+    email: result.email,
+    released_questionnaire: result.released_questionnaire,
   };
 }
 
 export async function registerAccess(cpf: string, values: RegisterFormValues): Promise<AuthSession> {
-  await wait();
+  const cpfDigits = onlyDigits(cpf);
+  const result = await registerStudentAccess(cpfDigits, values.email, values.password);
 
   return {
-    cpf,
-    studentId: 'student_mock_registered',
-    token: `mock-token:${cpf}:${values.email}`,
+    cpf: result.cpf,
+    studentId: result.studentId,
+    token: result.token,
+    refreshToken: result.refreshToken,
+    name: result.name,
+    email: result.email,
+    released_questionnaire: result.released_questionnaire,
   };
 }

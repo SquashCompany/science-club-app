@@ -5,44 +5,59 @@ import { useColorScheme } from 'nativewind';
 
 import { AppShell } from '@/src/shared/components/layout/AppShell';
 import { AppText } from '@/src/shared/components/ui/AppText';
+import { useAuthStore } from '@/src/features/auth/services/auth.store';
 
 export function HomeScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { session } = useAuthStore();
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 12) return 'Bom dia';
+    if (hour >= 12 && hour < 18) return 'Boa tarde';
+    return 'Boa noite';
+  };
+
+  const greeting = getGreeting();
+  const userName = session?.name || 'Aluno';
+  const questionnaire = session?.released_questionnaire;
 
   return (
-    <AppShell greeting="Boa tarde" title="João Dutra" contentClassName="pb-32">
+    <AppShell greeting={greeting} title={userName} contentClassName="pb-32">
       
       {/* Extreme Priority Action */}
-      <Animated.View 
-        entering={FadeInDown.delay(200).duration(800)}
-        className="mb-12"
-      >
-        <View className="bg-white rounded-[40px] p-8 min-h-[220px] justify-between relative overflow-hidden shadow-2xl shadow-black/10 border border-border-subtle">
-          <View className="absolute -right-8 -bottom-8 opacity-[0.03]">
-             <ClipboardText size={160} color="#000000" weight="fill" />
-          </View>
-          
-          <View className="flex-row justify-between items-center z-10">
-            <View className="bg-black/5 px-4 py-1.5 rounded-full border border-black/5">
-              <AppText className="text-[11px] font-bold uppercase tracking-widest text-black/60">Ação Urgente</AppText>
+      {questionnaire && (
+        <Animated.View 
+          entering={FadeInDown.delay(200).duration(800)}
+          className="mb-12"
+        >
+          <View className="bg-white rounded-[40px] p-8 min-h-[220px] justify-between relative overflow-hidden shadow-2xl shadow-black/10 border border-border-subtle">
+            <View className="absolute -right-8 -bottom-8 opacity-[0.03]">
+               <ClipboardText size={160} color="#000000" weight="fill" />
             </View>
-            <View className="w-2.5 h-2.5 rounded-full bg-brand-primary" />
-          </View>
-          
-          <View className="z-10 mt-6">
-            <AppText className="text-base font-medium text-black/60 mb-1">Semana 4 de 4</AppText>
-            <AppText className="font-heading text-4xl font-bold text-black leading-tight mb-6">
-              Questionário{'\n'}Liberado
-            </AppText>
             
-            <Pressable className="bg-brand-primary self-start px-6 py-3 rounded-2xl flex-row items-center gap-2">
-              <AppText className="text-white font-bold text-sm">Responder agora</AppText>
-              <ArrowRight color="#FFFFFF" size={16} weight="bold" />
-            </Pressable>
+            <View className="flex-row justify-between items-center z-10">
+              <View className="bg-black/5 px-4 py-1.5 rounded-full border border-black/5">
+                <AppText className="text-[11px] font-bold uppercase tracking-widest text-black/60">Ação Urgente</AppText>
+              </View>
+              <View className="w-2.5 h-2.5 rounded-full bg-brand-primary" />
+            </View>
+            
+            <View className="z-10 mt-6">
+              <AppText className="text-base font-medium text-black/60 mb-1">{questionnaire.title}</AppText>
+              <AppText className="font-heading text-4xl font-bold text-black leading-tight mb-6">
+                Questionário{'\n'}Liberado
+              </AppText>
+              
+              <Pressable className="bg-brand-primary self-start px-6 py-3 rounded-2xl flex-row items-center gap-2">
+                <AppText className="text-white font-bold text-sm">Responder agora</AppText>
+                <ArrowRight color="#FFFFFF" size={16} weight="bold" />
+              </Pressable>
+            </View>
           </View>
-        </View>
-      </Animated.View>
+        </Animated.View>
+      )}
 
       <View className="space-y-16">
         {/* Workout Section */}

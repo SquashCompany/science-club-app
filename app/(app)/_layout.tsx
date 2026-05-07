@@ -15,6 +15,20 @@ export default function AppLayout() {
       <Stack.Screen name="workouts/[id]" />
       <Stack.Screen name="workouts/[id]/session" />
       <Stack.Screen name="workouts/[id]/finish" />
+      <Stack.Screen name="diet/plan" />
+      <Stack.Screen name="diet/log" />
+      <Stack.Screen name="diet/history" />
+      <Stack.Screen name="diet/meals/[mealId]" />
+      <Stack.Screen name="history/workouts/[historyId]" />
+      <Stack.Screen name="history/meals/[date]" />
+      <Stack.Screen name="assessments/[assessmentId]" />
+      <Stack.Screen name="assessments/[assessmentId]/questionnaire" />
+      <Stack.Screen name="assessments/[assessmentId]/photos" />
+      <Stack.Screen name="assessments/[assessmentId]/exams" />
+      <Stack.Screen name="assessments/[assessmentId]/result" />
+      <Stack.Screen name="profile/edit-contact" />
+      <Stack.Screen name="profile/preferences" />
+      <Stack.Screen name="profile/documents" />
     </Stack>
   );
 }
