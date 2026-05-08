@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Pressable, View } from 'react-native';
 import { CheckCircle, Warning, XCircle, Info } from 'phosphor-react-native';
-import { useColorScheme } from 'nativewind';
 
 import { AppText } from '@/src/shared/components/ui/AppText';
+import { useAppTheme } from '@/src/shared/theme/appTheme';
 import { useSonnerStore, type SonnerType } from '@/src/shared/stores/sonner.store';
 
 const ICON_SIZE = 22;
@@ -52,8 +52,7 @@ function getSonnerConfig(type: SonnerType, isLight: boolean) {
  */
 export function AppSonner() {
   const { state, hideSonner } = useSonnerStore();
-  const { colorScheme } = useColorScheme();
-  const isLight = colorScheme === 'light';
+  const { isLight } = useAppTheme();
 
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-30)).current;

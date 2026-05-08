@@ -1,9 +1,9 @@
 import { CaretLeft } from 'phosphor-react-native';
-import { useColorScheme } from 'nativewind';
 import { PropsWithChildren } from 'react';
 import { View, Pressable, Image } from 'react-native';
 
 import { AppText } from '@/src/shared/components/ui/AppText';
+import { useAppTheme } from '@/src/shared/theme/appTheme';
 
 type LoginShellProps = PropsWithChildren<{
   onBack?: () => void;
@@ -11,8 +11,7 @@ type LoginShellProps = PropsWithChildren<{
 }>;
 
 export function LoginShell({ children, onBack, showBackButton }: LoginShellProps) {
-  const { colorScheme } = useColorScheme();
-  const isLight = colorScheme === 'light';
+  const { isLight } = useAppTheme();
 
   const backgroundLogo = isLight 
     ? require('@/assets/images/brand/logo_d.png') 

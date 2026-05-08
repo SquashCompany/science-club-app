@@ -1,6 +1,5 @@
 import { Barbell, ChartPieSlice, ClockCounterClockwise, ForkKnife, House, UserCircle } from 'phosphor-react-native';
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'nativewind';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import Animated, {
@@ -8,6 +7,8 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+
+import { useAppTheme } from '@/src/shared/theme/appTheme';
 
 function TabIcon({ Icon, color, focused }: { Icon: any; color: string; focused: boolean }) {
   const scale = useSharedValue(1);
@@ -28,8 +29,7 @@ function TabIcon({ Icon, color, focused }: { Icon: any; color: string; focused: 
 }
 
 export default function AppTabsLayout() {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useAppTheme();
 
   return (
     <Tabs

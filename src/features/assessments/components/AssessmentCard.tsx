@@ -30,12 +30,13 @@ export function AssessmentCard({ assessment, draft, onPress }: AssessmentCardPro
               <View className={cn('rounded-full border px-3 py-1.5', tone.bg, tone.border)}>
                 <AppText className={cn('text-xs font-semibold', tone.text)}>{getStatusLabel(assessment.status)}</AppText>
               </View>
-              <View className="rounded-full border border-border-subtle bg-bg-base px-3 py-1.5">
-                <AppText className="text-xs font-semibold text-text-muted">{assessment.type}</AppText>
-              </View>
+              {assessment.category && (
+                <View className="rounded-full border border-border-subtle bg-bg-base px-3 py-1.5">
+                    <AppText className="text-xs font-semibold text-text-muted">{assessment.category}</AppText>
+                </View>
+              )}
             </View>
             <AppText className="text-2xl font-semibold leading-tight text-text-main">{assessment.title}</AppText>
-            <AppText className="mt-2 text-sm leading-snug text-text-muted">{assessment.category}</AppText>
           </View>
           <View className="h-11 w-11 items-center justify-center rounded-2xl bg-bg-base">
             <CaretRight color="#A1A1AA" size={20} weight="bold" />
@@ -45,16 +46,18 @@ export function AssessmentCard({ assessment, draft, onPress }: AssessmentCardPro
         <View className="mb-5 gap-3">
           <View className="flex-row items-center gap-3">
             <CalendarCheck color="#A78BFA" size={18} weight="duotone" />
-            <AppText className="flex-1 text-sm text-text-soft">Prazo: {assessment.dueDate}</AppText>
+            <AppText className="flex-1 text-sm text-text-soft">Prazo: 10 dias</AppText>
           </View>
           <View className="flex-row items-center gap-3">
             <UserCircle color="#A78BFA" size={18} weight="duotone" />
-            <AppText className="flex-1 text-sm text-text-soft">{assessment.professional}</AppText>
+            <AppText className="flex-1 text-sm text-text-soft">{assessment.professional?.name || 'Equipe Science Club'}</AppText>
           </View>
-          <View className="flex-row items-center gap-3">
-            <ClipboardText color="#A78BFA" size={18} weight="duotone" />
-            <AppText className="flex-1 text-sm text-text-soft">{assessment.mesocycle}</AppText>
-          </View>
+          {assessment.mesocycle && (
+            <View className="flex-row items-center gap-3">
+              <ClipboardText color="#A78BFA" size={18} weight="duotone" />
+              <AppText className="flex-1 text-sm text-text-soft">{assessment.mesocycle}</AppText>
+            </View>
+          )}
         </View>
 
         <View>

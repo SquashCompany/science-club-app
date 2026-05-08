@@ -1,17 +1,20 @@
 import { CalendarCheck, ChartPieSlice, Clock, SealCheck, WarningCircle } from 'phosphor-react-native';
 import { router, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, ActivityIndicator } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useQuery } from '@tanstack/react-query';
 
 import { AppScreen } from '@/src/shared/components/ui/AppScreen';
 import { AppText } from '@/src/shared/components/ui/AppText';
 import { cn } from '@/src/shared/utils/cn';
+import { useAuthStore } from '@/src/features/auth/services/auth.store';
 
 import { AssessmentCard } from '../components/AssessmentCard';
 import { createAssessmentDraft, useAssessmentsStore } from '../services/assessments.store';
 import { AssessmentFilter } from '../types';
 import { getAssessmentProgress, getStatusLabel, getStatusTone } from '../utils';
+import { getStudentEvaluations } from '../api/assessments';
 
 const filters: { label: string; value: AssessmentFilter }[] = [
   { label: 'Pendentes', value: 'pending' },
@@ -22,14 +25,20 @@ const filters: { label: string; value: AssessmentFilter }[] = [
 
 export function AssessmentsDashboardScreen() {
   const [filter, setFilter] = useState<AssessmentFilter>('pending');
-  const assessments = useAssessmentsStore((state) => state.assessments);
+  const { session } = useAuthStore();
   const drafts = useAssessmentsStore((state) => state.drafts);
+
+  const { data: assessments = [], isLoading } = useQuery({
+    queryKey: ['assessments'],
+    queryFn: () => getStudentEvaluations(session?.token!),
+    enabled: !!session?.token,
+  });
 
   const urgentAssessment = useMemo(
     () =>
       assessments.find((assessment) => assessment.status === 'overdue') ??
-      assessments.find((assessment) => assessment.status === 'sent') ??
-      assessments.find((assessment) => assessment.status === 'received') ??
+      assessments.find((assessment) => assessment.status === 'pending') ??
+      assessments.find((assessment) => assessment.status === 'scheduled') ??
       assessments[0],
     [assessments],
   );
@@ -38,18 +47,27 @@ export function AssessmentsDashboardScreen() {
     () =>
       assessments.filter((assessment) => {
         if (filter === 'all') return true;
-        if (filter === 'done') return assessment.status === 'answered';
-        if (filter === 'analysis') return assessment.status === 'received' || assessment.status === 'analysis';
+        if (filter === 'done') return assessment.status === 'done';
+        if (filter === 'analysis') return ['received', 'analysis', 'answered'].includes(assessment.status);
         return ['pending', 'sent', 'scheduled', 'overdue'].includes(assessment.status);
       }),
     [assessments, filter],
   );
 
   const pendingCount = assessments.filter((item) => ['pending', 'sent', 'scheduled', 'overdue'].includes(item.status)).length;
-  const analysisCount = assessments.filter((item) => item.status === 'received' || item.status === 'analysis').length;
-  const doneCount = assessments.filter((item) => item.status === 'answered').length;
-  const urgentDraft = drafts[urgentAssessment.id] ?? createAssessmentDraft(urgentAssessment);
-  const urgentTone = getStatusTone(urgentAssessment.status);
+  const analysisCount = assessments.filter((item) => ['received', 'analysis', 'answered'].includes(item.status)).length;
+  const doneCount = assessments.filter((item) => item.status === 'done').length;
+
+  const urgentDraft = urgentAssessment ? (drafts[urgentAssessment.id] ?? createAssessmentDraft(urgentAssessment as any)) : null;
+  const urgentTone = urgentAssessment ? getStatusTone(urgentAssessment.status) : null;
+
+  if (isLoading) {
+    return (
+      <AppScreen contentClassName="items-center justify-center">
+        <ActivityIndicator size="large" color="#A78BFA" />
+      </AppScreen>
+    );
+  }
 
   return (
     <AppScreen contentClassName="px-5 pb-36 pt-10">
@@ -64,31 +82,33 @@ export function AssessmentsDashboardScreen() {
           </View>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          className="mb-6 overflow-hidden rounded-[32px] border border-brand-primary/35 bg-bg-surface p-5"
-          onPress={() => router.push(`/(app)/assessments/${urgentAssessment.id}` as Href)}
-        >
-          <View className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-brand-primary/20" />
-          <View className="mb-7 flex-row items-center justify-between">
-            <View className={cn('rounded-full border px-3 py-1.5', urgentTone.bg, urgentTone.border)}>
-              <AppText className={cn('text-xs font-semibold', urgentTone.text)}>{getStatusLabel(urgentAssessment.status)}</AppText>
+        {urgentAssessment && urgentTone && urgentDraft && (
+          <Pressable
+            accessibilityRole="button"
+            className="mb-6 overflow-hidden rounded-[32px] border border-brand-primary/35 bg-bg-surface p-5"
+            onPress={() => router.push(`/(app)/assessments/${urgentAssessment.id}` as Href)}
+          >
+            <View className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-brand-primary/20" />
+            <View className="mb-7 flex-row items-center justify-between">
+              <View className={cn('rounded-full border px-3 py-1.5', urgentTone.bg, urgentTone.border)}>
+                <AppText className={cn('text-xs font-semibold', urgentTone.text)}>{getStatusLabel(urgentAssessment.status)}</AppText>
+              </View>
+              <AppText className="text-sm font-semibold text-text-muted">{getAssessmentProgress(urgentAssessment as any, urgentDraft)}% enviado</AppText>
             </View>
-            <AppText className="text-sm font-semibold text-text-muted">{getAssessmentProgress(urgentAssessment, urgentDraft)}% enviado</AppText>
-          </View>
 
-          <AppText className="text-3xl font-semibold leading-tight text-text-main">{urgentAssessment.title}</AppText>
-          <AppText className="mt-3 text-base leading-snug text-text-soft">
-            {urgentAssessment.status === 'answered'
-              ? 'Parecer entregue. Veja os ajustes e proximos passos.'
-              : 'Sua equipe precisa dessas informacoes para ajustar treino, dieta e estrategia.'}
-          </AppText>
+            <AppText className="text-3xl font-semibold leading-tight text-text-main">{urgentAssessment.title}</AppText>
+            <AppText className="mt-3 text-base leading-snug text-text-soft">
+              {urgentAssessment.status === 'answered' || urgentAssessment.status === 'done'
+                ? 'Parecer entregue. Veja os ajustes e proximos passos.'
+                : 'Sua equipe precisa dessas informacoes para ajustar treino, dieta e estrategia.'}
+            </AppText>
 
-          <View className="mt-7 flex-row gap-3">
-            <MetricPill icon={CalendarCheck} label="Prazo" value={urgentAssessment.dueDate} />
-            <MetricPill icon={Clock} label="Proxima" value={urgentAssessment.nextEvaluation} />
-          </View>
-        </Pressable>
+            <View className="mt-7 flex-row gap-3">
+              <MetricPill icon={CalendarCheck} label="Prazo" value="10 dias" />
+              <MetricPill icon={Clock} label="Status" value={getStatusLabel(urgentAssessment.status)} />
+            </View>
+          </Pressable>
+        )}
 
         <View className="mb-5 flex-row gap-3">
           <SummaryCard icon={WarningCircle} label="pendentes" value={String(pendingCount)} tone="warning" />
@@ -107,9 +127,9 @@ export function AssessmentsDashboardScreen() {
             </View>
           </View>
           <View className="gap-4">
-            <ComparisonRow label="Peso" previous="83,4kg" current="82,1kg" progress={72} />
-            <ComparisonRow label="Cintura" previous="88cm" current="85cm" progress={66} />
-            <ComparisonRow label="Fotos enviadas" previous="4 poses" current="4 poses" progress={100} />
+            <ComparisonRow label="Peso" previous="--" current="--" progress={0} />
+            <ComparisonRow label="Cintura" previous="--" current="--" progress={0} />
+            <ComparisonRow label="Fotos enviadas" previous="--" current="--" progress={0} />
           </View>
         </View>
 
@@ -142,11 +162,14 @@ export function AssessmentsDashboardScreen() {
           {filteredAssessments.map((assessment) => (
             <AssessmentCard
               key={assessment.id}
-              assessment={assessment}
-              draft={drafts[assessment.id] ?? createAssessmentDraft(assessment)}
+              assessment={assessment as any}
+              draft={drafts[assessment.id] ?? createAssessmentDraft(assessment as any)}
               onPress={() => router.push(`/(app)/assessments/${assessment.id}` as Href)}
             />
           ))}
+          {filteredAssessments.length === 0 && (
+              <AppText className="text-center text-text-soft py-10">Nenhuma avaliação encontrada.</AppText>
+          )}
         </View>
       </Animated.View>
     </AppScreen>

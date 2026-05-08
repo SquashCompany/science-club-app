@@ -1,16 +1,39 @@
 import { ArrowRight, CaretRight, ClipboardText, Clock, ForkKnife, Play } from 'phosphor-react-native';
+import { router, type Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { useColorScheme } from 'nativewind';
 
 import { AppShell } from '@/src/shared/components/layout/AppShell';
 import { AppText } from '@/src/shared/components/ui/AppText';
+import { useAppTheme } from '@/src/shared/theme/appTheme';
 import { useAuthStore } from '@/src/features/auth/services/auth.store';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { createEvaluation, getStudentEvaluations, EvaluationDTO } from '../../assessments/api/assessments';
 
 export function HomeScreen() {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark } = useAppTheme();
   const { session } = useAuthStore();
+  const [isCreating, setIsCreating] = useState(false);
+
+  const { data: evaluations } = useQuery({
+    queryKey: ['assessments'],
+    queryFn: () => getStudentEvaluations(session?.token!),
+    enabled: !!session?.token,
+  });
+
+  const handleStartAssessment = async () => {
+    if (!session?.token || !session?.released_questionnaire?.id) return;
+    try {
+      setIsCreating(true);
+      const evalData = await createEvaluation(session.token, session.released_questionnaire.id);
+      router.push(`/(app)/assessments/${evalData.id}` as Href);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -21,13 +44,21 @@ export function HomeScreen() {
 
   const greeting = getGreeting();
   const userName = session?.name || 'Aluno';
+  
+  // Só mostra o card se houver um questionário liberado E o aluno ainda não tiver enviado uma resposta para ele
   const questionnaire = session?.released_questionnaire;
+  const hasSubmittedEvaluation = evaluations?.some((ev: EvaluationDTO) => 
+    (ev.questionnaire.id === questionnaire?.id || (ev.questionnaire as any)._id === questionnaire?.id) && 
+    ['answered', 'analysis', 'done'].includes(ev.status)
+  );
+  
+  const showQuestionnaireCard = questionnaire && !hasSubmittedEvaluation;
 
   return (
     <AppShell greeting={greeting} title={userName} contentClassName="pb-32">
       
       {/* Extreme Priority Action */}
-      {questionnaire && (
+      {showQuestionnaireCard && (
         <Animated.View 
           entering={FadeInDown.delay(200).duration(800)}
           className="mb-12"
@@ -50,8 +81,14 @@ export function HomeScreen() {
                 Questionário{'\n'}Liberado
               </AppText>
               
-              <Pressable className="bg-brand-primary self-start px-6 py-3 rounded-2xl flex-row items-center gap-2">
-                <AppText className="text-white font-bold text-sm">Responder agora</AppText>
+              <Pressable 
+                className="bg-brand-primary self-start px-6 py-3 rounded-2xl flex-row items-center gap-2"
+                onPress={handleStartAssessment}
+                disabled={isCreating}
+              >
+                <AppText className="text-white font-bold text-sm">
+                  {isCreating ? 'Carregando...' : 'Responder agora'}
+                </AppText>
                 <ArrowRight color="#FFFFFF" size={16} weight="bold" />
               </Pressable>
             </View>

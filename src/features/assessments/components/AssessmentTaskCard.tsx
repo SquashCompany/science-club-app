@@ -11,6 +11,7 @@ type AssessmentTaskCardProps = {
   progressLabel: string;
   done?: boolean;
   urgent?: boolean;
+  neutral?: boolean;
   disabled?: boolean;
   icon: ComponentType<{ color: string; size: number; weight?: 'regular' | 'duotone' | 'fill' | 'bold' }>;
   onPress?: () => void;
@@ -22,11 +23,12 @@ export function AssessmentTaskCard({
   progressLabel,
   done,
   urgent,
+  neutral,
   disabled,
   icon: Icon,
   onPress,
 }: AssessmentTaskCardProps) {
-  const color = done ? '#34D399' : urgent ? '#FCD34D' : '#A78BFA';
+  const color = done ? '#34D399' : urgent ? '#FCD34D' : neutral ? '#71717A' : '#A78BFA';
 
   return (
     <Pressable
@@ -51,7 +53,7 @@ export function AssessmentTaskCard({
           ) : null}
         </View>
         <AppText className="mt-1 text-sm leading-snug text-text-muted">{description}</AppText>
-        <AppText className={cn('mt-2 text-xs font-semibold', done ? 'text-emerald-300' : 'text-brand-secondary')}>
+        <AppText className={cn('mt-2 text-xs font-semibold', done ? 'text-emerald-300' : neutral ? 'text-text-muted' : 'text-brand-secondary')}>
           {progressLabel}
         </AppText>
       </View>

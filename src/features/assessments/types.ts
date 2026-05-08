@@ -1,47 +1,41 @@
-export type AssessmentStatus = 'pending' | 'sent' | 'received' | 'analysis' | 'answered' | 'overdue' | 'scheduled';
+export type AssessmentStatus = 'pending' | 'sent' | 'received' | 'analysis' | 'answered' | 'overdue' | 'scheduled' | 'done';
 
-export type AssessmentFieldType = 'text' | 'long_text' | 'number' | 'select' | 'radio' | 'checkbox';
+export type AssessmentFieldType = 'text' | 'long_text' | 'number' | 'select' | 'radio' | 'checkbox' | 'paragraph';
 
 export type AssessmentFilter = 'pending' | 'analysis' | 'done' | 'all';
 
 export type AssessmentField = {
   id: string;
   label: string;
+  description?: string;
   type: AssessmentFieldType;
   required: boolean;
   options?: string[];
-};
-
-export type AssessmentQuestionnaireSection = {
-  id: string;
-  title: string;
-  description: string;
-  fields: AssessmentField[];
 };
 
 export type AssessmentQuestionnaire = {
   id: string;
   title: string;
   description: string;
-  sections: AssessmentQuestionnaireSection[];
+  questions: AssessmentField[];
+  image_questions: AssessmentPhotoPose[];
+  attachment_questions: AssessmentExam[];
 };
 
 export type AssessmentPhotoPose = {
   id: string;
   label: string;
-  instruction: string;
+  description: string;
+  instruction?: string;
+  position?: string;
   required: boolean;
 };
 
 export type AssessmentExam = {
   id: string;
-  name: string;
-  type: string;
-  category: string;
+  label: string;
+  description: string;
   required: boolean;
-  date?: string;
-  status?: 'requested' | 'attached' | 'reviewed';
-  note: string;
 };
 
 export type AssessmentResult = {
@@ -56,20 +50,18 @@ export type AssessmentResult = {
 export type Assessment = {
   id: string;
   title: string;
-  type: string;
   category: string;
+  type?: string;
   status: AssessmentStatus;
-  plan: string;
-  mesocycle: string;
-  professional: string;
-  dueDate: string;
+  plan?: string;
+  mesocycle?: string;
+  professional?: { id?: string; _id?: string; name: string };
+  due_date: string;
   submittedAt?: string;
-  lastEvaluation: string;
-  nextEvaluation: string;
+  lastEvaluation?: string;
+  nextEvaluation?: string;
   linkedDemand?: string;
   questionnaire: AssessmentQuestionnaire;
-  photoPoses: AssessmentPhotoPose[];
-  exams: AssessmentExam[];
   result?: AssessmentResult;
 };
 
@@ -77,7 +69,7 @@ export type AssessmentAnswerValue = string | string[];
 
 export type AssessmentDraft = {
   answers: Record<string, AssessmentAnswerValue>;
-  photos: Record<string, boolean>;
-  exams: Record<string, boolean>;
+  photos: Record<string, string | null>;
+  exams: Record<string, string | null>;
   submitted: boolean;
 };

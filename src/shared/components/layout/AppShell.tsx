@@ -1,10 +1,8 @@
 import { PropsWithChildren } from 'react';
-import { ScrollView, View, StyleSheet } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppLogo } from '@/src/shared/components/ui/AppLogo';
 import { AppText } from '@/src/shared/components/ui/AppText';
-import { colors } from '@/src/shared/theme/tokens';
 import { cn } from '@/src/shared/utils/cn';
 
 import { AnimatedScreenContent } from './AnimatedScreenContent';

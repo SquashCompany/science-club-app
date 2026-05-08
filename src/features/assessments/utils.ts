@@ -3,21 +3,22 @@ import { Assessment, AssessmentAnswerValue, AssessmentDraft, AssessmentField } f
 export function getStatusLabel(status: Assessment['status']) {
   const labels: Record<Assessment['status'], string> = {
     pending: 'Pendente',
-    sent: 'Disponivel',
+    sent: 'Disponível',
     received: 'Recebido',
-    analysis: 'Em analise',
-    answered: 'Concluida',
+    analysis: 'Em análise',
+    answered: 'Em análise',
     overdue: 'Atrasada',
     scheduled: 'Agendada',
+    done: 'Concluída'
   };
 
   return labels[status];
 }
 
 export function getStatusTone(status: Assessment['status']) {
-  if (status === 'answered') return { text: 'text-emerald-300', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20', color: '#34D399' };
+  if (status === 'done') return { text: 'text-emerald-300', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20', color: '#34D399' };
   if (status === 'overdue') return { text: 'text-red-200', bg: 'bg-red-500/10', border: 'border-red-500/20', color: '#FCA5A5' };
-  if (status === 'sent' || status === 'scheduled' || status === 'pending') return { text: 'text-amber-200', bg: 'bg-amber-300/10', border: 'border-amber-300/20', color: '#FCD34D' };
+  if (status === 'sent' || status === 'scheduled' || status === 'pending' || status === 'answered' || status === 'analysis') return { text: 'text-amber-200', bg: 'bg-amber-300/10', border: 'border-amber-300/20', color: '#FCD34D' };
   return { text: 'text-brand-secondary', bg: 'bg-brand-primary/10', border: 'border-brand-primary/25', color: '#A78BFA' };
 }
 
@@ -26,52 +27,54 @@ export function isAnswerFilled(value: AssessmentAnswerValue | undefined) {
   return Boolean(value?.trim());
 }
 
-export function getAllFields(assessment: Assessment) {
-  return assessment.questionnaire.sections.flatMap((section) => section.fields);
-}
-
 export function getRequiredMissing(assessment: Assessment, draft: AssessmentDraft) {
-  return getAllFields(assessment).filter((field) => field.required && !isAnswerFilled(draft.answers[field.id]));
+  const missingQuestions = assessment.questionnaire.questions.filter((field) => field.required && !isAnswerFilled(draft.answers[field.id || (field as any)._id]));
+  return missingQuestions;
 }
 
 export function getQuestionnaireProgress(assessment: Assessment, draft: AssessmentDraft) {
-  const fields = getAllFields(assessment);
-  const answered = fields.filter((field) => isAnswerFilled(draft.answers[field.id])).length;
+  const fields = assessment.questionnaire.questions;
+  const answered = fields.filter((field) => isAnswerFilled(draft.answers[field.id || (field as any)._id])).length;
 
   return {
     answered,
     total: fields.length,
-    percent: fields.length ? Math.round((answered / fields.length) * 100) : 0,
+    percent: fields.length ? Math.round((answered / fields.length) * 100) : 100,
   };
 }
 
 export function getPhotoProgress(assessment: Assessment, draft: AssessmentDraft) {
-  const required = assessment.photoPoses.filter((pose) => pose.required);
-  const done = required.filter((pose) => draft.photos[pose.id]).length;
+  const fields = assessment.questionnaire.image_questions;
+  const done = fields.filter((pose: any) => draft.photos[pose.id || pose._id]).length;
 
   return {
     done,
-    total: required.length,
-    percent: required.length ? Math.round((done / required.length) * 100) : 0,
+    total: fields.length,
+    percent: fields.length ? Math.round((done / fields.length) * 100) : 100,
   };
 }
 
 export function getExamProgress(assessment: Assessment, draft: AssessmentDraft) {
-  const required = assessment.exams.filter((exam) => exam.required);
-  const done = required.filter((exam) => draft.exams[exam.id]).length;
+  const fields = assessment.questionnaire.attachment_questions;
+  const done = fields.filter((exam: any) => draft.exams[exam.id || exam._id]).length;
 
   return {
     done,
-    total: required.length,
-    percent: required.length ? Math.round((done / required.length) * 100) : 100,
+    total: fields.length,
+    percent: fields.length ? Math.round((done / fields.length) * 100) : 100,
   };
 }
 
 export function canSubmitAssessment(assessment: Assessment, draft: AssessmentDraft) {
-  const photos = getPhotoProgress(assessment, draft);
-  const exams = getExamProgress(assessment, draft);
+  const questionsMissing = getRequiredMissing(assessment, draft).length === 0;
+  
+  const requiredPhotos = assessment.questionnaire.image_questions.filter(p => p.required);
+  const photosDone = requiredPhotos.every(p => draft.photos[p.id || (p as any)._id]);
 
-  return getRequiredMissing(assessment, draft).length === 0 && photos.done === photos.total && exams.done === exams.total;
+  const requiredExams = assessment.questionnaire.attachment_questions.filter(e => e.required);
+  const examsDone = requiredExams.every(e => draft.exams[e.id || (e as any)._id]);
+
+  return questionsMissing && photosDone && examsDone;
 }
 
 export function getAssessmentProgress(assessment: Assessment, draft: AssessmentDraft) {
@@ -83,4 +86,10 @@ export function getAssessmentProgress(assessment: Assessment, draft: AssessmentD
 
 export function getFieldKeyboardType(field: AssessmentField) {
   return field.type === 'number' ? 'numeric' : 'default';
+}
+
+export function cleanText(text: string) {
+  if (!text) return '';
+  // Remove tudo que vem depois de * ou # (IDs técnicos)
+  return text.split(/[#*]/)[0].trim();
 }

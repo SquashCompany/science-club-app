@@ -19,6 +19,16 @@ export function AssessmentFieldRenderer({ field, value, onChange, onToggleOption
   const missing = field.required && !isAnswerFilled(value);
   const textValue = Array.isArray(value) ? value.join(', ') : value ?? '';
 
+  if (field.type === 'paragraph') {
+    return (
+      <View className="mb-4 px-1">
+        <AppText className="text-base leading-relaxed text-text-main">
+          {field.label}
+        </AppText>
+      </View>
+    );
+  }
+
   if (field.type === 'select' || field.type === 'radio') {
     return (
       <FieldShell field={field} missing={missing}>
@@ -92,6 +102,7 @@ export function AssessmentFieldRenderer({ field, value, onChange, onToggleOption
           'rounded-2xl border border-border-subtle bg-bg-base px-4 py-4 font-sans text-base text-text-main',
           field.type === 'long_text' && 'min-h-[132px] text-top',
         )}
+        style={{ color: '#FFFFFF' }}
         keyboardType={getFieldKeyboardType(field)}
         multiline={field.type === 'long_text'}
         onChangeText={(nextValue) => onChange(nextValue)}

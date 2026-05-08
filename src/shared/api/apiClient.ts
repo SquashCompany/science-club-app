@@ -12,7 +12,7 @@ export async function apiClient<TResponse>(
     ...options,
     headers: {
       Accept: 'application/json',
-      'Content-Type': 'application/json',
+      ...(!(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },

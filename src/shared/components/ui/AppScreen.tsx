@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors } from '@/src/shared/theme/tokens';
 import { cn } from '@/src/shared/utils/cn';
 
 type AppScreenProps = PropsWithChildren<ScrollViewProps> & {

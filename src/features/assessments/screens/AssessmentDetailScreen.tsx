@@ -1,15 +1,19 @@
-import { ArrowLeft, Camera, ClipboardText, FileText, Flask, PaperPlaneTilt, SealCheck } from 'phosphor-react-native';
+import { ArrowLeft, Camera, ClipboardText, FileText, Flask, PaperPlaneTilt, SealCheck, ImageSquare } from 'phosphor-react-native';
 import { router, type Href, useLocalSearchParams } from 'expo-router';
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, Pressable, View, ActivityIndicator } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 import { AppButton } from '@/src/shared/components/ui/AppButton';
 import { AppScreen } from '@/src/shared/components/ui/AppScreen';
 import { AppText } from '@/src/shared/components/ui/AppText';
 import { cn } from '@/src/shared/utils/cn';
+import { useAuthStore } from '@/src/features/auth/services/auth.store';
 
 import { AssessmentTaskCard } from '../components/AssessmentTaskCard';
 import { createAssessmentDraft, useAssessmentsStore } from '../services/assessments.store';
+import { getEvaluationById } from '../api/assessments';
 import {
   canSubmitAssessment,
   getExamProgress,
@@ -18,36 +22,55 @@ import {
   getRequiredMissing,
   getStatusLabel,
   getStatusTone,
+  cleanText,
 } from '../utils';
 
 export function AssessmentDetailScreen() {
   const { assessmentId } = useLocalSearchParams<{ assessmentId: string }>();
-  const assessments = useAssessmentsStore((state) => state.assessments);
+  const { session } = useAuthStore();
+  const queryClient = useQueryClient();
+
+  const { data: assessment, isLoading, error } = useQuery({
+    queryKey: ['assessment', assessmentId],
+    queryFn: () => getEvaluationById(session?.token!, assessmentId!),
+    enabled: !!session?.token && !!assessmentId,
+  });
+
   const drafts = useAssessmentsStore((state) => state.drafts);
-  const submitAssessment = useAssessmentsStore((state) => state.submitAssessment);
-  const assessment = assessments.find((item) => item.id === assessmentId) ?? assessments[0];
-  const draft = drafts[assessment.id] ?? createAssessmentDraft(assessment);
-  const statusTone = getStatusTone(assessment.status);
-  const questionnaire = getQuestionnaireProgress(assessment, draft);
-  const photos = getPhotoProgress(assessment, draft);
-  const exams = getExamProgress(assessment, draft);
-  const missing = getRequiredMissing(assessment, draft);
-  const canSubmit = canSubmitAssessment(assessment, draft);
-  const isScheduled = assessment.status === 'scheduled';
-  const readOnly = isScheduled || assessment.status === 'analysis' || assessment.status === 'answered' || draft.submitted;
+  const initializeDraft = useAssessmentsStore((state) => state.initializeDraft);
 
-  const handleSubmit = () => {
-    if (!canSubmit) {
-      Alert.alert(
-        'Ainda falta completar',
-        `Questionario: ${missing.length} obrigatorias pendentes. Fotos: ${photos.done}/${photos.total}. Exames obrigatorios: ${exams.done}/${exams.total}.`,
-      );
-      return;
+  useEffect(() => {
+    if (assessment) {
+      initializeDraft(assessment as any);
     }
+  }, [assessment, initializeDraft]);
 
-    submitAssessment(assessment.id);
-    Alert.alert('Avaliação enviada', 'Recebemos seu envio. A equipe ja pode analisar seus dados.');
-  };
+  if (isLoading) {
+    return (
+      <AppScreen contentClassName="items-center justify-center">
+        <ActivityIndicator size="large" color="#A78BFA" />
+      </AppScreen>
+    );
+  }
+
+  if (error || !assessment) {
+    return (
+      <AppScreen contentClassName="items-center justify-center p-5">
+        <AppText className="text-center text-text-soft">Erro ao carregar avaliação ou não encontrada.</AppText>
+        <AppButton className="mt-5" onPress={() => router.back()}>Voltar</AppButton>
+      </AppScreen>
+    );
+  }
+
+  const draft = drafts[assessment.id] ?? createAssessmentDraft(assessment as any);
+  const statusTone = getStatusTone(assessment.status);
+  const questionnaire = getQuestionnaireProgress(assessment as any, draft);
+  const photos = getPhotoProgress(assessment as any, draft);
+  const exams = getExamProgress(assessment as any, draft);
+  const missing = getRequiredMissing(assessment as any, draft);
+  const isScheduled = assessment.status === 'scheduled';
+  const isSubmitted = assessment.status === 'analysis' || assessment.status === 'answered' || assessment.status === 'done' || draft.submitted;
+  const readOnly = isScheduled || isSubmitted;
 
   return (
     <AppScreen contentClassName="px-5 pb-12 pt-5">
@@ -61,14 +84,17 @@ export function AssessmentDetailScreen() {
           <View className={cn('mb-5 self-start rounded-full border px-3 py-1.5', statusTone.bg, statusTone.border)}>
             <AppText className={cn('text-xs font-semibold', statusTone.text)}>{getStatusLabel(assessment.status)}</AppText>
           </View>
-          <AppText className="text-4xl font-semibold leading-tight text-text-main">{assessment.title}</AppText>
-          <AppText className="mt-3 text-base leading-snug text-text-soft">{assessment.category} · {assessment.plan}</AppText>
+          <AppText className="text-4xl font-semibold leading-tight text-text-main">
+            {assessment.title.includes('Acompanhamento') ? assessment.questionnaire.title : assessment.title}
+          </AppText>
+          <AppText className="mt-3 text-base leading-snug text-text-soft">
+            {cleanText(assessment.questionnaire.description || assessment.category)} {assessment.plan ? `· ${assessment.plan}` : ''}
+          </AppText>
 
           <View className="mt-7 gap-3">
-            <InfoRow label="Responsavel" value={assessment.professional} />
-            <InfoRow label="Mesociclo" value={assessment.mesocycle} />
-            <InfoRow label="Prazo" value={assessment.dueDate} />
-            <InfoRow label="Demanda" value={assessment.linkedDemand ?? 'Acompanhamento do ciclo'} />
+            <InfoRow label="Responsável" value={assessment.professional?.name || 'Equipe'} />
+            {assessment.mesocycle && <InfoRow label="Mesociclo" value={assessment.mesocycle} />}
+            <InfoRow label="Prazo" value="10 dias" />
           </View>
         </View>
       </Animated.View>
@@ -76,69 +102,79 @@ export function AssessmentDetailScreen() {
       <Animated.View entering={FadeInDown.delay(80).duration(420)} className="gap-3">
         <AppText className="mb-1 text-2xl font-semibold text-text-main">Checklist</AppText>
         <AssessmentTaskCard
-          description={assessment.questionnaire.description}
-          done={questionnaire.percent === 100}
-          disabled={isScheduled}
+          description={cleanText(assessment.questionnaire.description)}
+          done={isSubmitted || questionnaire.percent === 100}
+          disabled={isScheduled || isSubmitted}
           icon={ClipboardText}
-          progressLabel={`${questionnaire.answered}/${questionnaire.total} respostas`}
-          title="Responder questionario"
-          urgent={missing.length > 0}
+          progressLabel={isSubmitted ? "Respondido" : `${questionnaire.answered}/${questionnaire.total}`}
+          title="Responder questionário"
+          urgent={!isSubmitted && missing.length > 0}
           onPress={() => router.push(`/(app)/assessments/${assessment.id}/questionnaire` as Href)}
         />
-        <AssessmentTaskCard
-          description="Frente, costas e laterais com enquadramento padronizado."
-          done={photos.done === photos.total}
-          disabled={isScheduled}
-          icon={Camera}
-          progressLabel={`${photos.done}/${photos.total} poses obrigatorias`}
-          title="Fotos corporais guiadas"
-          urgent={photos.done < photos.total}
-          onPress={() => router.push(`/(app)/assessments/${assessment.id}/photos` as Href)}
-        />
-        <AssessmentTaskCard
-          description={assessment.exams.length ? 'Anexe os exames solicitados ou marque que estao indisponiveis.' : 'Nenhum exame solicitado nesta avaliacao.'}
-          disabled={isScheduled || !assessment.exams.length}
-          done={exams.done === exams.total}
-          icon={Flask}
-          progressLabel={assessment.exams.length ? `${exams.done}/${exams.total} obrigatorios` : 'Sem anexos obrigatorios'}
-          title="Exames e anexos"
-          onPress={() => router.push(`/(app)/assessments/${assessment.id}/exams` as Href)}
-        />
-        {assessment.result && (
+        {assessment.questionnaire.image_questions.length > 0 && (
           <AssessmentTaskCard
-            description="Parecer entregue pela equipe com ajustes e proximos passos."
-            done
-            icon={SealCheck}
-            progressLabel={`Entregue em ${assessment.result.deliveredAt}`}
-            title="Parecer final"
-            onPress={() => router.push(`/(app)/assessments/${assessment.id}/result` as Href)}
+            description="Fotos frontais, laterais e costas com enquadramento padronizado."
+            done={isSubmitted || photos.done === photos.total}
+            disabled={isScheduled || isSubmitted}
+            icon={Camera}
+            progressLabel={isSubmitted ? "Enviado" : `${photos.done}/${photos.total}`}
+            title="Fotos corporais"
+            urgent={!isSubmitted && photos.done < photos.total}
+            onPress={() => router.push(`/(app)/assessments/${assessment.id}/photos` as Href)}
           />
         )}
+        {assessment.questionnaire.attachment_questions.length > 0 && (
+          <AssessmentTaskCard
+            description="Anexe os exames solicitados ou documentos relevantes."
+            done={isSubmitted || exams.done === exams.total}
+            disabled={isScheduled || isSubmitted}
+            icon={Flask}
+            progressLabel={isSubmitted ? "Enviado" : `${exams.done}/${exams.total}`}
+            title="Exames e anexos"
+            urgent={!isSubmitted && exams.done < exams.total}
+            onPress={() => router.push(`/(app)/assessments/${assessment.id}/exams` as Href)}
+          />
+        )}
+        <AssessmentTaskCard
+          description={assessment.result?.deliveredAt ? "Parecer entregue pela equipe com ajustes e próximos passos." : isSubmitted ? "Aguardando análise da equipe para liberar o parecer." : "Aguardando o envio do questionário para análise."}
+          done={!!assessment.result?.deliveredAt}
+          urgent={!assessment.result?.deliveredAt && isSubmitted}
+          neutral={!assessment.result?.deliveredAt && !isSubmitted}
+          icon={SealCheck}
+          progressLabel={assessment.result?.deliveredAt ? `Respondido em ${assessment.result.deliveredAt}` : isSubmitted ? "Em análise" : "Aguardando Envio"}
+          title="Parecer final"
+          disabled={!assessment.result?.deliveredAt}
+          onPress={() => assessment.result?.deliveredAt && router.push(`/(app)/assessments/${assessment.id}/result` as Href)}
+        />
       </Animated.View>
 
       <Animated.View entering={FadeInDown.delay(140).duration(420)} className="mt-7">
-        {assessment.status === 'answered' ? (
+        {assessment.status === 'answered' || assessment.status === 'done' ? (
           <AppButton rightIcon={<FileText color="#FFFFFF" size={20} weight="bold" />} onPress={() => router.push(`/(app)/assessments/${assessment.id}/result` as Href)}>
             Ver parecer final
           </AppButton>
         ) : isScheduled ? (
           <View className="rounded-[28px] border border-amber-300/20 bg-amber-300/10 p-5">
-            <AppText className="text-xl font-semibold text-text-main">Ainda nao liberada</AppText>
+            <AppText className="text-xl font-semibold text-text-main">Ainda não liberada</AppText>
             <AppText className="mt-2 text-sm leading-relaxed text-text-soft">
-              Esta avaliacao esta agendada. Quando chegar a data, o questionario e as fotos ficam disponiveis.
+              Esta avaliação está agendada. Quando chegar a data, o questionário e as fotos ficam disponíveis.
             </AppText>
-            <AppText className="mt-4 text-sm font-semibold text-amber-200">Libera: {assessment.dueDate}</AppText>
+            <AppText className="mt-4 text-sm font-semibold text-amber-200">Libera: {assessment.due_date}</AppText>
           </View>
         ) : readOnly ? (
           <View className="rounded-[28px] border border-brand-primary/25 bg-brand-primary/10 p-5">
             <AppText className="text-xl font-semibold text-text-main">Equipe analisando</AppText>
             <AppText className="mt-2 text-sm leading-relaxed text-text-soft">
-              Seu envio foi recebido. A equipe revisa questionario, fotos e anexos antes de liberar o parecer.
+              Seu envio foi recebido. A equipe revisa questionário, fotos e anexos antes de liberar o parecer.
             </AppText>
-            <AppText className="mt-4 text-sm font-semibold text-brand-secondary">Previsao: ate 24h uteis</AppText>
+            <AppText className="mt-4 text-sm font-semibold text-brand-secondary">Previsão: até 24h úteis</AppText>
           </View>
         ) : (
-          <AppButton rightIcon={<PaperPlaneTilt color="#FFFFFF" size={20} weight="bold" />} onPress={handleSubmit}>
+          <AppButton 
+            disabled={readOnly}
+            rightIcon={<PaperPlaneTilt color="#FFFFFF" size={20} weight="bold" />} 
+            onPress={() => router.push(`/(app)/assessments/${assessment.id}/review` as Href)}
+          >
             Revisar e enviar avaliação
           </AppButton>
         )}

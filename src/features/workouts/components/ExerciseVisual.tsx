@@ -1,10 +1,11 @@
+import { memo } from 'react';
 import { Barbell, PersonSimpleRun, PersonSimpleTaiChi } from 'phosphor-react-native';
 import { View } from 'react-native';
-import { useColorScheme } from 'nativewind';
 
 import { cn } from '@/src/shared/utils/cn';
 
 type ExerciseVisualProps = {
+  isDark: boolean;
   muscle: string;
   size?: 'sm' | 'lg';
   muted?: boolean;
@@ -25,35 +26,41 @@ const muscleColor: Record<string, string> = {
   Panturrilhas: '#FCD34D',
 };
 
-export function ExerciseVisual({ muscle, muted, size = 'sm' }: ExerciseVisualProps) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+function ExerciseVisualComponent({ muscle, muted, size = 'sm', isDark }: ExerciseVisualProps) {
   const accent = muscleColor[muscle] ?? '#8B5CF6';
   const Icon = muscle === 'Core' || muscle === 'Abdomen' ? PersonSimpleTaiChi : muscle === 'Pernas' || muscle === 'Quadriceps' ? PersonSimpleRun : Barbell;
 
+  if (size === 'sm') {
+    return null; // No longer used in list items
+  }
+
   return (
-    <View className={cn('items-center justify-center', size === 'lg' ? 'h-64 w-full' : 'h-24 w-28')}>
+    <View className="items-center justify-center h-48 w-full mb-4">
       <View
-        className={cn(
-          'items-center justify-center rounded-full border',
-          size === 'lg' ? 'h-52 w-52' : 'h-20 w-20',
-          muted ? 'opacity-35' : 'opacity-100',
-        )}
+        className="items-center justify-center rounded-full h-40 w-40"
         style={{
-          borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(17,24,39,0.08)',
-          backgroundColor: isDark ? 'rgba(255,255,255,0.035)' : 'rgba(17,24,39,0.035)',
+          backgroundColor: `${accent}12`,
         }}
       >
         <View
-          className={cn('absolute rounded-full', size === 'lg' ? 'h-28 w-28' : 'h-12 w-12')}
-          style={{ backgroundColor: `${accent}22` }}
+          className="absolute rounded-full h-20 w-20"
+          style={{ backgroundColor: `${accent}25` }}
         />
-        <View
-          className={cn('absolute rounded-full', size === 'lg' ? 'h-16 w-16' : 'h-8 w-8')}
-          style={{ backgroundColor: `${accent}55` }}
+        <Icon
+          color={muted ? (isDark ? '#6B7280' : '#9CA3AF') : accent}
+          size={100}
+          weight="duotone"
         />
-        <Icon color={muted ? (isDark ? '#6B7280' : '#9CA3AF') : accent} size={size === 'lg' ? 132 : 54} weight="duotone" />
       </View>
     </View>
   );
 }
+
+export const ExerciseVisual = memo(
+  ExerciseVisualComponent,
+  (prevProps, nextProps) =>
+    prevProps.isDark === nextProps.isDark &&
+    prevProps.muscle === nextProps.muscle &&
+    prevProps.muted === nextProps.muted &&
+    prevProps.size === nextProps.size,
+);

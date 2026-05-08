@@ -1,10 +1,11 @@
-import { ArrowLeft, CaretRight, ClockCountdown, NotePencil } from 'phosphor-react-native';
+import { ArrowLeft, CaretRight, Play } from 'phosphor-react-native';
 import { router, type Href, useLocalSearchParams } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { AppScreen } from '@/src/shared/components/ui/AppScreen';
 import { AppText } from '@/src/shared/components/ui/AppText';
+import { useAppTheme } from '@/src/shared/theme/appTheme';
 import { cn } from '@/src/shared/utils/cn';
 
 import { WorkoutExerciseListItem } from '../components/WorkoutExerciseListItem';
@@ -12,112 +13,119 @@ import { getTotalSets, getWorkoutSession, getWorkoutSheet } from '../data/workou
 
 export function WorkoutSheetDetailScreen() {
   const { id, sessionId } = useLocalSearchParams<{ id: string; sessionId?: string }>();
+  const { isDark } = useAppTheme();
   const sheet = getWorkoutSheet(id);
   const session = getWorkoutSession(id, sessionId);
   const sessionExercises = session.exercises.filter(Boolean);
   const totalSets = getTotalSets({ ...session, exercises: sessionExercises });
 
   return (
-    <AppScreen contentClassName="px-5 pb-36 pt-8">
-      <View className="mb-8 flex-row items-center justify-between">
+    <AppScreen contentClassName="px-6 pb-36 pt-8">
+      {/* Minimal Header */}
+      <View className="mb-10 flex-row items-center justify-between">
         <Pressable
           accessibilityRole="button"
-          className="h-14 w-14 items-center justify-center rounded-full border border-border-subtle bg-bg-surface"
+          className="h-11 w-11 items-center justify-center rounded-full bg-bg-surface border border-border-subtle"
           onPress={() => router.back()}
         >
-          <ArrowLeft color="#FFFFFF" size={26} weight="bold" />
+          <ArrowLeft color={isDark ? '#FFFFFF' : '#111827'} size={20} weight="bold" />
         </Pressable>
-        <View className="flex-1 px-4">
-          <AppText className="text-center text-base font-semibold text-text-main">{sheet.title}</AppText>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          className="h-14 w-14 items-center justify-center rounded-full border border-border-subtle bg-bg-surface"
-          onPress={() => router.push(`/(app)/workouts/${sheet.id}/session?sessionId=${session.id}` as Href)}
-        >
-          <CaretRight color="#A78BFA" size={23} weight="bold" style={{ marginLeft: 2 }} />
-        </Pressable>
+        <AppText className="text-xs font-bold uppercase tracking-[0.2em] text-text-muted">
+          {sheet.title}
+        </AppText>
+        <View className="w-11" />
       </View>
 
-      <Animated.View entering={FadeInDown.duration(420)}>
-        <View className="mb-6 rounded-[32px] border border-border-subtle bg-bg-surface px-5 py-5">
-          <View className="mb-5 flex-row items-start justify-between gap-4">
-            <View className="flex-1">
-              <AppText className="text-sm text-text-muted">{session.type}</AppText>
-              <AppText className="mt-2 text-4xl font-semibold leading-tight text-text-main">{session.title}</AppText>
-              <AppText className="mt-3 text-base leading-snug text-text-muted">{session.days}</AppText>
-            </View>
-            <View className="rounded-2xl bg-brand-primary/12 px-3 py-2">
-              <AppText className="text-sm font-semibold text-brand-secondary">{session.estimatedMinutes} min</AppText>
-            </View>
-          </View>
-
-          <View className="flex-row gap-3">
-            {[
-              { label: 'Exercicios', value: String(sessionExercises.length) },
-              { label: 'Series', value: String(totalSets) },
-              { label: 'Objetivo', value: sheet.goal },
-            ].map((item) => (
-              <View key={item.label} className="flex-1 rounded-2xl border border-border-subtle bg-bg-base px-3 py-3">
-                <AppText className="text-xs text-text-muted">{item.label}</AppText>
-                <AppText className="mt-1 text-base font-semibold text-text-main">{item.value}</AppText>
-              </View>
-            ))}
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            className="mt-5 min-h-[56px] flex-row items-center justify-center gap-2 rounded-2xl bg-brand-primary px-5"
-            onPress={() => router.push(`/(app)/workouts/${sheet.id}/session?sessionId=${session.id}` as Href)}
-          >
-            <CaretRight color="#FFFFFF" size={18} weight="bold" />
-            <AppText className="text-base font-semibold text-white">Abrir treino</AppText>
-          </Pressable>
+      {/* Session Hero */}
+      <Animated.View entering={FadeInDown.duration(600)}>
+        <View className="mb-4">
+          <AppText className="text-text-muted text-xs font-bold tracking-[0.3em] uppercase mb-3">
+            {session.type} • {session.days}
+          </AppText>
+          <AppText className="font-heading text-5xl font-bold text-text-main tracking-tight leading-[1.05]">
+            {session.title}
+          </AppText>
         </View>
+
+        {/* Inline stats */}
+        <View className="flex-row items-center gap-4 mt-4 mb-10">
+          {[
+            { value: String(sessionExercises.length), label: 'exercícios' },
+            { value: String(totalSets), label: 'séries' },
+            { value: `${session.estimatedMinutes}min`, label: 'estimado' },
+          ].map((item) => (
+            <View key={item.label} className="flex-row items-baseline gap-1.5">
+              <AppText className="text-xl font-bold text-text-main">{item.value}</AppText>
+              <AppText className="text-xs text-text-muted">{item.label}</AppText>
+            </View>
+          ))}
+        </View>
+
+        {/* Start button */}
+        <Pressable
+          accessibilityRole="button"
+          className="min-h-[56px] flex-row items-center justify-center gap-2.5 rounded-2xl bg-brand-primary"
+          onPress={() => router.push(`/(app)/workouts/${sheet.id}/session?sessionId=${session.id}` as Href)}
+        >
+          <Play color="#FFFFFF" size={18} weight="fill" />
+          <AppText className="text-base font-bold text-white">Iniciar Treino</AppText>
+        </Pressable>
       </Animated.View>
 
-      <Animated.View entering={FadeInDown.delay(80).duration(420)}>
-        <View className="mb-4 flex-row items-center justify-between">
-          <AppText className="text-3xl font-semibold text-text-main">Exercicios</AppText>
-          <View className="flex-row items-center gap-2">
-            <ClockCountdown color="#8A8D99" size={18} weight="duotone" />
-            <AppText className="text-sm text-text-muted">descanso guiado</AppText>
-          </View>
+      {/* Exercises */}
+      <Animated.View entering={FadeInDown.delay(100).duration(600)} className="mt-12">
+        <View className="flex-row items-end justify-between border-b border-border-subtle pb-4 mb-2">
+          <AppText className="text-[11px] font-bold text-text-muted uppercase tracking-[0.25em]">
+            Exercícios
+          </AppText>
+          <AppText className="text-xs text-text-muted">{sessionExercises.length} no total</AppText>
         </View>
 
-        <View className="overflow-hidden rounded-[28px] border border-border-subtle bg-bg-surface">
+        <View>
           {sessionExercises.map((exercise) => (
             <WorkoutExerciseListItem
               key={exercise.id}
               exercise={exercise}
+              isDark={isDark}
               onPress={() => router.push(`/(app)/workouts/${sheet.id}/session?sessionId=${session.id}&exerciseId=${exercise.id}` as Href)}
             />
           ))}
         </View>
       </Animated.View>
 
+      {/* Other sessions in this plan */}
       {sheet.sessions.length > 1 ? (
-        <Animated.View entering={FadeInDown.delay(160).duration(420)} className="mt-8">
-          <AppText className="mb-3 text-2xl font-semibold text-text-main">Outras fichas do plano</AppText>
-          <View className="gap-3">
-            {sheet.sessions.map((item) => (
+        <Animated.View entering={FadeInDown.delay(200).duration(600)} className="mt-12">
+          <View className="flex-row items-end justify-between border-b border-border-subtle pb-4 mb-2">
+            <AppText className="text-[11px] font-bold text-text-muted uppercase tracking-[0.25em]">
+              Mesmo Plano
+            </AppText>
+          </View>
+          <View>
+            {sheet.sessions.map((item, index) => (
               <Pressable
                 key={item.id}
                 accessibilityRole="button"
-                className={cn(
-                  'flex-row items-center rounded-2xl border px-4 py-4',
-                  item.id === session.id ? 'border-brand-primary bg-brand-primary/10' : 'border-border-subtle bg-bg-surface',
-                )}
+                className="flex-row items-center py-4"
+                style={index < sheet.sessions.length - 1 ? { borderBottomWidth: 1, borderBottomColor: isDark ? '#1A1A1A' : '#F3F4F6' } : undefined}
                 onPress={() => router.push(`/(app)/workouts/${sheet.id}?sessionId=${item.id}` as Href)}
               >
-                <View className="h-10 w-10 items-center justify-center rounded-xl bg-bg-base">
-                  <NotePencil color="#A78BFA" size={20} weight="duotone" />
+                <View className={cn(
+                  'h-2 w-2 rounded-full mr-4',
+                  item.id === session.id ? 'bg-brand-primary' : 'bg-text-muted/30',
+                )} />
+                <View className="flex-1">
+                  <AppText className={cn(
+                    'text-base font-semibold',
+                    item.id === session.id ? 'text-brand-secondary' : 'text-text-main',
+                  )}>
+                    {item.title}
+                  </AppText>
+                  <AppText className="mt-0.5 text-sm text-text-muted">{item.days}</AppText>
                 </View>
-                <View className="ml-3 flex-1">
-                  <AppText className="text-base font-semibold text-text-main">{item.title}</AppText>
-                  <AppText className="mt-1 text-sm text-text-muted">{item.days}</AppText>
-                </View>
-                <CaretRight color="#71717A" size={19} weight="bold" />
+                {item.id !== session.id && (
+                  <CaretRight color={isDark ? '#555555' : '#9CA3AF'} size={16} weight="bold" />
+                )}
               </Pressable>
             ))}
           </View>

@@ -1,23 +1,21 @@
-import { IdentificationCard, CaretRight, UserCircle, Gear, FileText, SignOut } from 'phosphor-react-native';
+import { CaretRight, SignOut } from 'phosphor-react-native';
 import { router } from 'expo-router';
 import { View, Pressable, Image } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { useColorScheme } from 'nativewind';
 
 import { useAuthStore } from '@/src/features/auth/services/auth.store';
 import { AppShell } from '@/src/shared/components/layout/AppShell';
 import { AppText } from '@/src/shared/components/ui/AppText';
+import { useAppTheme } from '@/src/shared/theme/appTheme';
 
 export function ProfileScreen() {
-  const { colorScheme } = useColorScheme();
+  const { isDark } = useAppTheme();
   const clearSession = useAuthStore((state) => state.clearSession);
 
   async function signOut() {
     await clearSession();
     router.replace('/(public)/login');
   }
-
-  const isDark = colorScheme === 'dark';
 
   return (
     <AppShell greeting="Identificação" title="Sua Conta">
@@ -96,6 +94,3 @@ export function ProfileScreen() {
     </AppShell>
   );
 }
-
-import { cn } from '@/src/shared/utils/cn';
-
