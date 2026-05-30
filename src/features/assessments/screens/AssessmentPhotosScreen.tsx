@@ -16,6 +16,8 @@ import { createAssessmentDraft, useAssessmentsStore } from '../services/assessme
 import { getPhotoProgress } from '../utils';
 import { getEvaluationById } from '../api/assessments';
 
+const PHOTO_ASPECT_RATIO = 9 / 16;
+
 export function AssessmentPhotosScreen() {
   const router = useRouter();
   const { assessmentId } = useLocalSearchParams<{ assessmentId: string }>();
@@ -59,7 +61,7 @@ export function AssessmentPhotosScreen() {
       Alert.alert('Permissão necessária', 'Autorize o acesso à câmera nas configurações.');
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [3, 4], quality: 0.88 });
+    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [9, 16], quality: 0.88 });
     if (!result.canceled) setPhoto(assessment!.id, poseId, result.assets[0].uri);
   }
 
@@ -72,7 +74,7 @@ export function AssessmentPhotosScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
-      aspect: [3, 4],
+      aspect: [9, 16],
       quality: 0.88,
     });
     if (!result.canceled) setPhoto(assessment!.id, poseId, result.assets[0].uri);
@@ -197,7 +199,16 @@ export function AssessmentPhotosScreen() {
               }}
             >
               {added && photoUri ? (
-                <View style={{ height: 130, width: '100%' }}>
+                <View
+                  style={{
+                    width: '100%',
+                    maxWidth: 180,
+                    aspectRatio: PHOTO_ASPECT_RATIO,
+                    alignSelf: 'center',
+                    overflow: 'hidden',
+                    borderRadius: 14,
+                  }}
+                >
                   <RNImage
                     source={{ uri: photoUri }}
                     style={{ width: '100%', height: '100%' }}

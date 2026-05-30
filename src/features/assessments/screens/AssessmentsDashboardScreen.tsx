@@ -459,14 +459,14 @@ export function AssessmentsDashboardScreen() {
                             {photo ? (
                               <Image
                                 source={{ uri: resolveApiUrl(photo.url) || photo.url }}
-                                style={{ width: '100%', aspectRatio: 0.8, backgroundColor: '#111111' }}
+                                style={{ width: '100%', aspectRatio: 9 / 16, backgroundColor: '#111111' }}
                                 resizeMode="cover"
                               />
                             ) : (
                               <View
                                 style={{
                                   width: '100%',
-                                  aspectRatio: 0.8,
+                                  aspectRatio: 9 / 16,
                                   alignItems: 'center',
                                   justifyContent: 'center',
                                   backgroundColor: '#141417',
@@ -827,7 +827,7 @@ export function AssessmentsDashboardScreen() {
               <View style={{ gap: 12 }}>
                 {(selectedAssessmentPhotos?.photos || []).map((photo, index) => (
                   <View key={`${photo.url}-${index}`} style={{ borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: '#232328', backgroundColor: '#151518' }}>
-                    <Image source={{ uri: resolveApiUrl(photo.url) || photo.url }} style={{ width: '100%', aspectRatio: 0.8, backgroundColor: '#111111' }} resizeMode="cover" />
+                    <Image source={{ uri: resolveApiUrl(photo.url) || photo.url }} style={{ width: '100%', aspectRatio: 9 / 16, backgroundColor: '#111111' }} resizeMode="cover" />
                     <View style={{ padding: 12 }}>
                       <AppText style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }}>
                         {photo.label || photo.position || `Foto ${index + 1}`}
